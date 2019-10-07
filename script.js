@@ -604,58 +604,12 @@ let y = [
   3.5987
 ];
 
-const slider = document.querySelector("#learning-rate-slider");
-
-let state = {
-  bias: 0,
-  weight: 0.5,
-  learningRate: 0.001,
-  iterations: 1000
-  
-}
-
-slider.oninput = () => {
-  state['learningRate'] = slider.value/1000;
-}
-
-
-function plotPoints()
-{
-
-}
-
-function drawPredictionLine()
-{
-
-}
-
-function plotLossesGraph(){
-
-}
-
-function train(){
-  alert("trainsing")
-}
-x_max = Math.max(...x);
-y_max = Math.max(...y);
-
 //Normalise data
-x = x.map(n => n / x_max);
-y = y.map(n => n / y_max);
-
 let svgWidth = 765;
 let svgHeight = 300;
 
-console.log(`${x.length} <== x.length\n\n`);
-console.log(`${y.length} <== y.length\n\n`);
-
-let dataset = [];
-for (let i = 0; i < x.length; i++) {
-  dataset.push([x[i], y[i]]);
-}
-
-console.log(`${dataset.length} <== dataset.length\n\n`);
-console.log(`${dataset[0].length} <== dataset[0].length\n\n`);
+x = x.map(n => n / Math.max(...x));
+y = y.map(n => n / Math.max(...y));
 
 let xScale = d3
   .scaleLinear()
@@ -667,79 +621,228 @@ let yScale = d3
   .domain([0, d3.max(y)])
   .range([0, svgHeight]);
 
-let svg = d3
-  .select(".linear-regression")
-  .attr("width", svgWidth)
-  .attr("height", svgHeight);
+let state = {
+  bias: 0,
+  weight: 0,
+  learningRate: 0.001,
+  iterations: 1000,
+  iterationsCompleted: 0
+};
 
-let dots = svg
-  .selectAll("rect")
-  .data(dataset)
-  .enter()
-  .append("circle")
-  .attr("cx", d => xScale(d[0]))
-  .attr("cy", d => svgHeight - yScale(d[1]))
-  .attr("r", 3)
-  .attr("fill", "red");
+function plotPoints() {
+  // Plots the data graph
 
-let x_axis = d3.axisBottom().scale(xScale);
-let y_axis = d3.axisLeft().scale(yScale);
-
-svg
-  .append("g")
-  .attr("transform", "translate(20, 0)")
-  .call(y_axis);
-
-svg
-  .append("g")
-  .attr("transform", `translate(0, ${svgHeight - 20})`)
-  .call(x_axis);
-
-let bias = 0.2; //c
-let weight = 0.4; //m
-
-let x1 = 0;
-let y1 = weight * x1 + bias;
-
-let x2 = Math.max(...x);
-let y2 = weight * x2 + bias;
-
-console.log(`${svgHeight - y2} <== y2\n\n`);
-
-x1 = xScale(x1);
-y1 = yScale(y1);
-
-x2 = xScale(x2);
-y2 = yScale(y2);
-
-console.log(`${x2} <== x2\n\n`);
-
-svg
-  .append("line")
-  .attr("x1", x1)
-  .attr("y1", svgHeight - y1)
-  .attr("x2", x2)
-  .attr("y2", svgHeight - y2)
-  .attr("stroke-width", 3)
-  .attr("stroke", "black");
-
-function cost_function(weight, bias) {
-  cost = 0;
+  let dataset = [];
   for (let i = 0; i < x.length; i++) {
-    let predicted_y = weight * x[i] + bias;
-    let loss = Math.pow(y[i] - predicted_y, 2);
-    cost += loss;
+    dataset.push([x[i], y[i]]);
   }
 
-  return cost;
+  let svg = d3
+    .select('.linear-regression')
+    .attr('width', svgWidth)
+    .attr('height', svgHeight);
+
+  let dots = svg
+    .selectAll('rect')
+    .data(dataset)
+    .enter()
+    .append('circle')
+    .attr('cx', d => xScale(d[0]))
+    .attr('cy', d => svgHeight - yScale(d[1]))
+    .attr('r', 3)
+    .attr('fill', 'red');
+
+  let x_axis = d3.axisBottom().scale(xScale);
+  let y_axis = d3.axisLeft().scale(yScale);
+
+  svg
+    .append('g')
+    .attr('transform', 'translate(20, 0)')
+    .call(y_axis);
+
+  svg
+    .append('g')
+    .attr('transform', `translate(0, ${svgHeight - 20})`)
+    .call(x_axis);
 }
 
-loss = [];
+function drawPredictionLine() {
+  let svgWidth = 765;
+  let svgHeight = 300;
+  let bias = state.bias;
+  let weight = state.weight;
 
-// Not varing the bias, only cost
-for (let i = 0; i <= 1; i += 0.1) {
-  loss.push([i, cost_function(i, 0)]);
+  let x1 = 0;
+  let y1 = weight * x1 + bias;
+
+  let x2 = Math.max(...x);
+  let y2 = weight * x2 + bias;
+
+  console.log(`${svgHeight - y2} <== y2\n\n`);
+
+  x1 = xScale(x1);
+  y1 = yScale(y1);
+
+  x2 = xScale(x2);
+  y2 = yScale(y2);
+
+  console.log(`${x2} <== x2\n\n`);
+
+  let svg = d3
+    .select('.linear-regression')
+    .attr('width', svgWidth)
+    .attr('height', svgHeight);
+  svg.selectAll('line').remove();
+
+  svg
+    .append('line')
+    .attr('x1', x1)
+    .attr('y1', svgHeight - y1)
+    .attr('x2', x2)
+    .attr('y2', svgHeight - y2)
+    .attr('stroke-width', 3)
+    .attr('stroke', 'black');
 }
 
-console.log(`${loss[1]} <== loss\n\n`);
-console.log(`${loss[0].length} <== loss.length\n\n`);
+function updateWeights() {
+  let weight = state.weight;
+
+  let weightDeriv = 0;
+
+  n = x.length;
+  for (let i = 0; i < n; i++) {
+    weightDeriv += -2 * x[i] * (y[i] - weight * x[i]);
+  }
+
+  state['weight'] = weight - (weightDeriv / n) * state.learningRate;
+  console.log(`${state.weight} <== state.weight\n\n`);
+}
+function plotLossesGraph() {
+  costs = state.costs;
+  maxCost = state.maxCost;
+
+  let svgWidth = 765;
+  let svgHeight = 300;
+
+  let xScale = d3
+    .scaleLinear()
+    .domain([0, 2])
+    .range([0, svgWidth]);
+
+  let yScale = d3
+    .scaleLinear()
+    .domain([0, maxCost])
+    .range([0, svgHeight]);
+
+  let svg = d3
+    .select('.loss')
+    .attr('width', svgWidth)
+    .attr('height', svgHeight);
+  svg.selectAll('*').remove();
+  let dots = svg
+    .selectAll('rect')
+    .data(costs)
+    .enter()
+    .append('circle')
+    .attr('cx', d => xScale(d[0]))
+    .attr('cy', d => svgHeight - yScale(d[1]))
+    .attr('r', 3)
+    .attr('fill', 'red');
+
+  let x_axis = d3.axisBottom().scale(xScale);
+  let y_axis = d3.axisLeft().scale(
+    d3
+      .scaleLinear()
+      .domain([0, maxCost])
+      .range([svgHeight, 0])
+  );
+
+  svg
+    .append('g')
+    .attr('transform', 'translate(20, 0)')
+    .call(y_axis);
+
+  svg
+    .append('g')
+    .attr('transform', `translate(0, ${svgHeight - 20})`)
+    .call(x_axis);
+
+  let weightCircle = svg
+    .append('circle')
+    .attr('cx', xScale(state.weight))
+    .attr('cy', svgHeight - yScale(cost_function(state.weight)))
+    .attr('r', 6)
+    .attr('fill', 'black');
+
+  // console.log(`${state.weight} <== wt\n\n`);
+}
+
+function trainModel() {
+  let initalGuess = Math.random() * 2;
+  state['weight'] = initalGuess;
+  let costs = [];
+  let maxCost = 0;
+  for (let i = 0; i <= 2; i += 0.001) {
+    let cost = cost_function(i, 0);
+    //    console.log(`${cost} <== cost\n\n`);
+    costs.push([i, cost]);
+    maxCost = Math.max(maxCost, cost);
+  }
+  state['costs'] = costs;
+  state['maxCost'] = maxCost;
+  plotLossesGraph(costs, maxCost);
+  const showIterationsDiv = document.querySelector('#show-iterations');
+  let ctr = 0;
+  let timer = setInterval(() => {
+    updateWeights();
+    plotLossesGraph();
+    drawPredictionLine();
+    ctr += 1;
+    console.log(`${ctr} <== ctr\n\n`);
+    state.iterationsCompleted += 1;
+    showIterationsDiv.innerHTML = `Iterations done: ${state.iterationsCompleted}`;
+    if (ctr >= state.iterations) {
+      console.log('IN C');
+
+      clearInterval(timer);
+    }
+  }, 500);
+
+  // for (let i = 0; i < state.iterations; i++) {
+  //   updateWeights();
+  //   plotLossesGraph();
+  //   //drawPredictionLine();
+  // }
+}
+function train() {
+  const slider = document.querySelector('#learning-rate-slider');
+  const iterations = document.querySelector('#n-iterations').value;
+  state['iterationsCompleted'] = 0;
+  if (iterations > 1 && iterations < 1000000) {
+    state['iterations'] = iterations;
+    state['learningRate'] = slider.value / 1000;
+    trainModel();
+  } else {
+    alert('Please enter 1 < Iterations < 1,000,000');
+  }
+}
+
+function cost_function(weight, bias) {
+  let totalError = 0;
+  let n = x.length;
+  // let diff = 0;
+  for (let i = 0; i < n; i++) {
+    let predicted_y = weight * x[i]; // + bias;
+    //diff += Math.abs(predicted_y - y[i]);
+    totalError += Math.pow(y[i] - predicted_y, 2);
+  }
+
+  //console.log(`${diff} <== diff\n\n`);
+
+  return totalError / n;
+}
+
+window.onload = () => {
+  plotPoints();
+  drawPredictionLine();
+};
